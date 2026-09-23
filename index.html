@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>1-2-4-8-7-5 and the stubborn 3-6-9</title>
+  <title>3-6-9 Vortex Dynamics</title>
   <style>
     :root {
       --bg: #07070c;
@@ -14,7 +14,14 @@
       --cyan: #6ec8c4;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { width: 100%; height: 100%; background: var(--bg); color: var(--ink); font-family: "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif; overflow: hidden; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Georgia, serif;
+      overflow: hidden;
+    }
     canvas { display: block; }
     #hud {
       position: fixed; left: 28px; bottom: 28px; z-index: 2;
@@ -26,11 +33,6 @@
       text-transform: uppercase; color: var(--gold); margin-bottom: 8px;
     }
     #hud p { font-size: 14px; line-height: 1.45; color: var(--dim); }
-    #hint {
-      position: fixed; right: 28px; bottom: 28px; z-index: 2;
-      font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
-      color: var(--dim); pointer-events: none;
-    }
     #legend {
       position: fixed; left: 28px; top: 28px; z-index: 2;
       font-size: 13px; line-height: 1.7; color: var(--dim);
@@ -45,14 +47,13 @@
 <body>
   <div id="legend">
     <div><span class="sw sw-motion"></span>1 · 2 · 4 · 8 · 7 · 5 — motion</div>
-    <div><span class="sw sw-refuse"></span>3 · 6 — the ones that refuse the wheel</div>
+    <div><span class="sw sw-refuse"></span>3 · 6 — oscillating polarity</div>
     <div><span class="sw sw-nine"></span>9 — still center</div>
   </div>
   <div id="hud">
-    <h1>The contrast</h1>
-    <p>One is motion. One is the numbers that refuse that motion. Drag to turn. Scroll to approach.</p>
+    <h1>Vortex Dynamics</h1>
+    <p>Drag to rotate view. Scroll to zoom.</p>
   </div>
-  <div id="hint">drag · scroll · the wheel keeps walking</div>
   <script type="importmap">
   {
     "imports": {
@@ -66,11 +67,11 @@
     import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x07070c, 0.028);
-    const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 0.1, 200);
+    const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 200);
     camera.position.set(7.4, 4.2, 9.2);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    renderer.setSize(innerWidth, innerHeight);
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setClearColor(0x07070c, 1);
     document.body.appendChild(renderer.domElement);
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -80,15 +81,12 @@
     controls.maxDistance = 22;
     controls.target.set(0, 0.4, 0);
     scene.add(new THREE.AmbientLight(0x3a3548, 1.1));
-    const key = new THREE.DirectionalLight(0xffe6c0, 1.35);
-    key.position.set(6, 10, 4);
-    scene.add(key);
-    const fill = new THREE.PointLight(0x6ec8c4, 18, 24);
-    fill.position.set(-4, 1, 3);
-    scene.add(fill);
-    const rim = new THREE.PointLight(0xc45c3a, 14, 20);
-    rim.position.set(3, 2, -5);
-    scene.add(rim);
+    const keyLight = new THREE.DirectionalLight(0xffe6c0, 1.35);
+    keyLight.position.set(6, 10, 4);
+    scene.add(keyLight);
+    const fillLight = new THREE.PointLight(0x6ec8c4, 18, 24);
+    fillLight.position.set(-4, 1, 3);
+    scene.add(fillLight);
     const floor = new THREE.Mesh(
       new THREE.RingGeometry(3.55, 3.7, 96),
       new THREE.MeshBasicMaterial({ color: 0x1c1a22, side: THREE.DoubleSide })
@@ -96,114 +94,84 @@
     floor.rotation.x = -Math.PI / 2;
     scene.add(floor);
     const R = 3.2;
-    const motion = [1, 2, 4, 8, 7, 5];
-    function angleOf(i, n, offset = -Math.PI / 2) {
-      return offset + (i / n) * Math.PI * 2;
-    }
-    function makeGlowSprite(color, size = 128) {
-      const c = document.createElement("canvas");
-      c.width = c.height = size;
-      const g = c.getContext("2d");
-      const grd = g.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
-      grd.addColorStop(0, color);
-      grd.addColorStop(0.35, color);
+    const motionDigits = [1, 2, 4, 8, 7, 5];
+    function makeGlowSprite(colorHex) {
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 128;
+      const ctx = canvas.getContext("2d");
+      const grd = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+      grd.addColorStop(0, colorHex);
+      grd.addColorStop(0.35, colorHex);
       grd.addColorStop(1, "rgba(0,0,0,0)");
-      g.fillStyle = grd;
-      g.fillRect(0, 0, size, size);
-      const tex = new THREE.CanvasTexture(c);
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, 128, 128);
+      const tex = new THREE.CanvasTexture(canvas);
       return new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     }
-    function makeDigitTexture(text, color, w = 256, h = 256) {
-      const c = document.createElement("canvas");
-      c.width = w; c.height = h;
-      const g = c.getContext("2d");
-      g.clearRect(0, 0, w, h);
-      g.fillStyle = color;
-      g.font = "600 140px Georgia, serif";
-      g.textAlign = "center";
-      g.textBaseline = "middle";
-      g.fillText(text, w / 2, h / 2 + 8);
-      const tex = new THREE.CanvasTexture(c);
-      tex.needsUpdate = true;
-      return tex;
-    }
-    const digitMats = {};
-    function digitSprite(n, color, scale = 1.05) {
-      const key = n + color;
-      if (!digitMats[key]) digitMats[key] = new THREE.SpriteMaterial({
-        map: makeDigitTexture(String(n), color),
-        transparent: true,
-        depthWrite: false
-      });
-      const s = new THREE.Sprite(digitMats[key]);
-      s.scale.set(scale, scale, 1);
-      return s;
+    function makeDigitSprite(text, color) {
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 256;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = color;
+      ctx.font = "600 140px Georgia, serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, 128, 136);
+      const tex = new THREE.CanvasTexture(canvas);
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+      sprite.scale.set(1.1, 1.1, 1);
+      return sprite;
     }
     const torus = new THREE.Mesh(
       new THREE.TorusGeometry(R, 0.035, 16, 180),
-      new THREE.MeshStandardMaterial({ color: 0x6ec8c4, emissive: 0x163a38, metalness: 0.2, roughness: 0.35 })
+      new THREE.MeshStandardMaterial({ color: 0x6ec8c4, emissive: 0x163a38, roughness: 0.35 })
     );
     torus.rotation.x = Math.PI / 2;
     scene.add(torus);
-    motion.forEach((n, i) => {
-      const a = angleOf(i, 6);
-      const x = Math.cos(a) * R;
-      const z = Math.sin(a) * R;
+    motionDigits.forEach((digit, i) => {
+      const angle = -Math.PI / 2 + (i / 6) * Math.PI * 2;
       const group = new THREE.Group();
-      group.position.set(x, 0, z);
+      group.position.set(Math.cos(angle) * R, 0, Math.sin(angle) * R);
       const core = new THREE.Mesh(
         new THREE.SphereGeometry(0.16, 24, 24),
-        new THREE.MeshStandardMaterial({ color: 0xbfedec, emissive: 0x2a6e6a, roughness: 0.25 })
+        new THREE.MeshStandardMaterial({ color: 0xbfedec, emissive: 0x2a6e6a })
       );
       group.add(core);
       const glow = makeGlowSprite("rgba(110,200,196,0.85)");
       glow.scale.set(1.6, 1.6, 1);
       group.add(glow);
-      const label = digitSprite(n, "#d8fffb", 0.95);
+      const label = makeDigitSprite(String(digit), "#d8fffb");
       label.position.y = 0.55;
       group.add(label);
       scene.add(group);
     });
-    const flowTicks = [];
-    for (let i = 0; i < 36; i++) {
-      const a = (i / 36) * Math.PI * 2;
-      const m = new THREE.Mesh(
-        new THREE.ConeGeometry(0.045, 0.16, 8),
-        new THREE.MeshBasicMaterial({ color: 0x6ec8c4, transparent: true, opacity: 0.55 })
-      );
-      m.position.set(Math.cos(a) * R, 0, Math.sin(a) * R);
-      m.lookAt(Math.cos(a + 0.2) * R, 0, Math.sin(a + 0.2) * R);
-      m.rotateX(Math.PI / 2);
-      scene.add(m);
-      flowTicks.push(m);
-    }
     const travelers = [];
     for (let i = 0; i < 18; i++) {
-      const p = new THREE.Mesh(
+      const particle = new THREE.Mesh(
         new THREE.SphereGeometry(0.045, 10, 10),
         new THREE.MeshBasicMaterial({ color: 0xe8fffc })
       );
-      scene.add(p);
-      travelers.push({ mesh: p, t: i / 18, speed: 0.06 + (i % 3) * 0.01 });
+      scene.add(particle);
+      travelers.push({ mesh: particle, progress: i / 18, speed: 0.06 + (i % 3) * 0.01 });
     }
-    function refuseNode(n, color) {
+    function createRefuseNode(digit) {
       const group = new THREE.Group();
       const core = new THREE.Mesh(
         new THREE.IcosahedronGeometry(0.28, 1),
-        new THREE.MeshStandardMaterial({ color, emissive: 0x4a1c12, roughness: 0.3, metalness: 0.15 })
+        new THREE.MeshStandardMaterial({ color: 0xc45c3a, emissive: 0x4a1c12, roughness: 0.3 })
       );
       group.add(core);
       const glow = makeGlowSprite("rgba(196,92,58,0.9)");
       glow.scale.set(2.4, 2.4, 1);
       group.add(glow);
-      const label = digitSprite(n, "#ffd4c4", 1.2);
+      const label = makeDigitSprite(String(digit), "#ffd4c4");
       label.position.y = 0.72;
       group.add(label);
       scene.add(group);
-      return { group, n };
+      return group;
     }
-    const node3 = refuseNode(3, 0xc45c3a);
-    const node6 = refuseNode(6, 0xc45c3a);
+    const node3 = createRefuseNode(3);
+    const node6 = createRefuseNode(6);
     const nineGroup = new THREE.Group();
     const nineCore = new THREE.Mesh(
       new THREE.OctahedronGeometry(0.42, 0),
@@ -213,7 +181,7 @@
     const nineGlow = makeGlowSprite("rgba(212,181,106,0.95)");
     nineGlow.scale.set(3.2, 3.2, 1);
     nineGroup.add(nineGlow);
-    const nineLabel = digitSprite(9, "#ffe9b0", 1.35);
+    const nineLabel = makeDigitSprite("9", "#ffe9b0");
     nineLabel.position.y = 0.95;
     nineGroup.add(nineLabel);
     nineGroup.position.set(0, 2.15, 0);
@@ -223,61 +191,44 @@
       new THREE.Vector3(0, 2.15, 0)
     ]);
     scene.add(new THREE.Line(axisGeo, new THREE.LineBasicMaterial({ color: 0xd4b56a, transparent: true, opacity: 0.35 })));
-    const filamentMat = new THREE.LineBasicMaterial({ color: 0xc45c3a, transparent: true, opacity: 0.28 });
+    const filamentMat = new THREE.LineBasicMaterial({ color: 0xc45c3a, transparent: true, opacity: 0.3 });
     const fil36 = new THREE.Line(new THREE.BufferGeometry(), filamentMat);
     const fil39 = new THREE.Line(new THREE.BufferGeometry(), filamentMat.clone());
     const fil69 = new THREE.Line(new THREE.BufferGeometry(), filamentMat.clone());
     scene.add(fil36, fil39, fil69);
-    const starGeo = new THREE.BufferGeometry();
-    const starN = 700;
-    const starPos = new Float32Array(starN * 3);
-    for (let i = 0; i < starN; i++) {
-      const r = 18 + Math.random() * 30;
-      const th = Math.random() * Math.PI * 2;
-      const ph = Math.acos(2 * Math.random() - 1);
-      starPos[i*3] = r * Math.sin(ph) * Math.cos(th);
-      starPos[i*3+1] = r * Math.cos(ph);
-      starPos[i*3+2] = r * Math.sin(ph) * Math.sin(th);
-    }
-    starGeo.setAttribute("position", new THREE.BufferAttribute(starPos, 3));
-    scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0x8a8578, size: 0.035 })));
-    function setLine(line, a, b) {
+    function updateLine(line, p1, p2) {
       line.geometry.dispose();
-      line.geometry = new THREE.BufferGeometry().setFromPoints([a, b]);
+      line.geometry = new THREE.BufferGeometry().setFromPoints([p1, p2]);
     }
     const clock = new THREE.Clock();
-    function tick() {
-      requestAnimationFrame(tick);
+    function animate() {
+      requestAnimationFrame(animate);
       const t = clock.getElapsedTime();
       controls.update();
       travelers.forEach(p => {
-        p.t = (p.t + p.speed * 0.016) % 1;
-        const a = -Math.PI / 2 + p.t * Math.PI * 2;
-        p.mesh.position.set(Math.cos(a) * R, Math.sin(t * 2 + p.t * 12) * 0.04, Math.sin(a) * R);
-      });
-      flowTicks.forEach((m, i) => {
-        m.material.opacity = 0.22 + 0.35 * (0.5 + 0.5 * Math.sin(t * 3 + i * 0.4));
+        p.progress = (p.progress + p.speed * 0.016) % 1;
+        const a = -Math.PI / 2 + p.progress * Math.PI * 2;
+        p.mesh.position.set(Math.cos(a) * R, Math.sin(t * 2 + p.progress * 12) * 0.04, Math.sin(a) * R);
       });
       const rRefuse = 4.15;
       const yAmp = 1.15;
       const a3 = t * 0.35;
       const a6 = a3 + Math.PI;
-      node3.group.position.set(Math.cos(a3) * rRefuse, Math.sin(t * 0.9) * yAmp, Math.sin(a3) * rRefuse);
-      node6.group.position.set(Math.cos(a6) * rRefuse, -Math.sin(t * 0.9) * yAmp, Math.sin(a6) * rRefuse);
-      node3.group.rotation.y = t * 0.6;
-      node6.group.rotation.y = -t * 0.6;
+      node3.position.set(Math.cos(a3) * rRefuse, Math.sin(t * 0.9) * yAmp, Math.sin(a3) * rRefuse);
+      node6.position.set(Math.cos(a6) * rRefuse, -Math.sin(t * 0.9) * yAmp, Math.sin(a6) * rRefuse);
+      node3.rotation.y = t * 0.6;
+      node6.rotation.y = -t * 0.6;
       nineGroup.rotation.y = t * 0.15;
-      nineCore.rotation.x = t * 0.2;
-      setLine(fil36, node3.group.position, node6.group.position);
-      setLine(fil39, node3.group.position, nineGroup.position);
-      setLine(fil69, node6.group.position, nineGroup.position);
+      updateLine(fil36, node3.position, node6.position);
+      updateLine(fil39, node3.position, nineGroup.position);
+      updateLine(fil69, node6.position, nineGroup.position);
       renderer.render(scene, camera);
     }
-    tick();
-    addEventListener("resize", () => {
-      camera.aspect = innerWidth / innerHeight;
+    animate();
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
-      renderer.setSize(innerWidth, innerHeight);
+      renderer.setSize(window.innerWidth, window.innerHeight);
     });
   </script>
 </body>
